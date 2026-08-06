@@ -37,6 +37,6 @@ jobs:
           protocol: ftps
           port: 21
          
-          local-dir: ./frontend/dist/
+          local-dir: ./dist/
           server-dir: public_html/crm/
           dangerous-clean-slate: false
