@@ -1,4 +1,4 @@
-name: Deploy to cPanel
+name: Frontend CI/CD
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,27 +16,28 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
           cache: npm
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm install
 
-      - name: Build Project
+      - name: Build React App
         run: npm run build
 
-      - name: Verify Dist Folder
-        run: ls -la dist
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: build/
 
-      - name: Deploy to cPanel
+      - name: Deploy to cPanel via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ftp.techsasi.com
+          server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-         
-          local-dir: ./dist/
+          local-dir: build/
+          
           server-dir: public_html/crm/  
           dangerous-clean-slate: false
