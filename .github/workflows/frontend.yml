@@ -15,7 +15,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
+          node-version: '20.x' # Upgraded to Node 20 to satisfy React Router v7 engine requirements
 
       - name: Install dependencies with Yarn
         run: yarn install
