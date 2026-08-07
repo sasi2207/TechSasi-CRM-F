@@ -4,10 +4,19 @@ on:
   push:
     branches:
       - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20]
 
     steps:
       - name: Checkout Repository
@@ -16,28 +25,30 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           cache: npm
 
-      - name: Install Dependencies
-        run: npm install
+      - name: Display Node & NPM Version
+        run: |
+          node -v
+          npm -v
 
-      - name: Build React App
+      - name: Clean NPM Cache
+        run: npm cache clean --force
+
+      - name: Remove Existing Lock Files
+        run: |
+          rm -rf node_modules
+          rm -f package-lock.json
+
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build Application
         run: npm run build
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-build
+          name: react-build
           path: build/
-
-      - name: Deploy to cPanel via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: build/
-          
-          server-dir: public_html/crm/  
-          dangerous-clean-slate: false
