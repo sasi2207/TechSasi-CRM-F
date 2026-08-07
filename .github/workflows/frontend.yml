@@ -17,13 +17,11 @@ jobs:
         with:
           node-version: '18.x'
 
-      - name: Install dependencies & Build
-        run: |
-          # Automatically detects or navigates into your frontend folder safely
-          # Change 'frontend' below if your folder has a different name
-          cd frontend
-          npm ci
-          npm run build
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run build
+        run: npm run build
 
       - name: Deploy to cPanel via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -31,5 +29,5 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: frontend/build/
+          local-dir: build/
           server-dir: public_html/crm/
