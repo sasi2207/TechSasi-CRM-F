@@ -1,54 +1,37 @@
-name: Frontend CI/CD
+name: Build and Deploy to cPanel
 
 on:
   push:
-    branches:
-      - main
-      - master
-  pull_request:
-    branches:
-      - main
-      - master
+    branches: [ main, master ]
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [20]
-
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: npm
+          node-version: '18.x'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-      - name: Display Node & NPM Version
-        run: |
-          node -v
-          npm -v
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./frontend
 
-      - name: Clean NPM Cache
-        run: npm cache clean --force
-
-      - name: Remove Existing Lock Files
-        run: |
-          rm -rf node_modules
-          rm -f package-lock.json
-
-      - name: Install Dependencies
-        run: npm install --legacy-peer-deps
-
-      - name: Build Application
+      - name: Run build
         run: npm run build
+        working-directory: ./frontend
 
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@v4
+      - name: Deploy to cPanel via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          name: react-build
-          path: build/
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: frontend/build/     # Pointing to the built files inside the frontend directory
+          server-dir: public_html/crm/
