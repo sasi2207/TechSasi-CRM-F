@@ -1,6 +1,10 @@
 import axios from "axios";
 
-const BACKEND_URL = "http://localhost:8000";
+// const BACKEND_URL = "http://localhost:8000";
+
+
+const BACKEND_URL = "https://crm.techsasi.com";
+
 export const API = `${BACKEND_URL}/api`;
 
 const api = axios.create({
