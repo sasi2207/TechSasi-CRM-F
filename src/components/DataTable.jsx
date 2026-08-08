@@ -28,13 +28,17 @@ export default function DataTable({
   emptyLabel = "No records yet",
 }) {
   const [q, setQ] = useState("");
+
+  // Safely ensure 'safeData' is always an array to prevent crashes
+  const safeData = Array.isArray(data) ? data : [];
+
   const filtered = q
-    ? data.filter((row) =>
-        (searchKeys.length ? searchKeys : Object.keys(row)).some((k) =>
-          String(row[k] ?? "").toLowerCase().includes(q.toLowerCase())
+    ? safeData.filter((row) =>
+        (searchKeys.length ? searchKeys : Object.keys(row || {})).some((k) =>
+          String(row?.[k] ?? "").toLowerCase().includes(q.toLowerCase())
         )
       )
-    : data;
+    : safeData;
 
   return (
     <div className="space-y-5">
@@ -91,10 +95,10 @@ export default function DataTable({
               </TableRow>
             )}
             {!loading && filtered.map((row, i) => (
-              <TableRow key={row.id || i} data-testid={`row-${i}`}>
+              <TableRow key={row?.id || i} data-testid={`row-${i}`}>
                 {columns.map((c) => (
                   <TableCell key={c.key} className={c.className}>
-                    {c.render ? c.render(row) : row[c.key]}
+                    {c.render ? c.render(row) : row?.[c.key]}
                   </TableCell>
                 ))}
                 {rowActions && (
