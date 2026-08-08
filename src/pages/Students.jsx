@@ -4,7 +4,7 @@ import DataTable, { StatusBadge } from "@/components/DataTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,9 +21,6 @@ export default function Students() {
     setLoading(true);
     try { 
       const response = await api.get("/students");
-      
-      // Safely extract the array whether response.data is an array, 
-      // or wrapped inside an object (e.g., response.data.data or response.data.students)
       const rawData = response.data;
       let finalRows = [];
 
@@ -106,7 +103,12 @@ export default function Students() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{editingId ? "Edit student" : "Add student"}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{editingId ? "Edit student" : "Add student"}</DialogTitle>
+            <DialogDescription>
+              Fill in the student details below and click save.
+            </DialogDescription>
+          </DialogHeader>
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-1"><Label>Student ID</Label><Input data-testid="student-id-input" value={form.student_id} onChange={(e) => setForm({ ...form, student_id: e.target.value })} /></div>
             <div className="col-span-1"><Label>Name</Label><Input data-testid="student-name-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
