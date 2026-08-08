@@ -19,8 +19,30 @@ export default function Students() {
 
   const load = async () => {
     setLoading(true);
-    try { const { data } = await api.get("/students"); setRows(data); } finally { setLoading(false); }
+    try { 
+      const response = await api.get("/students");
+      
+      // Safely extract the array whether response.data is an array, 
+      // or wrapped inside an object (e.g., response.data.data or response.data.students)
+      const rawData = response.data;
+      let finalRows = [];
+
+      if (Array.isArray(rawData)) {
+        finalRows = rawData;
+      } else if (rawData && typeof rawData === "object") {
+        finalRows = rawData.data || rawData.students || Object.values(rawData).find(Array.isArray) || [];
+      }
+
+      setRows(finalRows);
+    } catch (err) {
+      console.error("Failed to load students:", err);
+      toast.error("Failed to load students");
+      setRows([]);
+    } finally { 
+      setLoading(false); 
+    }
   };
+
   useEffect(() => { load(); }, []);
 
   const openAdd = () => { setForm(empty); setEditingId(null); setOpen(true); };
@@ -39,9 +61,13 @@ export default function Students() {
 
   const remove = async (id) => {
     if (!confirm("Delete this student?")) return;
-    await api.delete(`/students/${id}`);
-    toast.success("Deleted");
-    load();
+    try {
+      await api.delete(`/students/${id}`);
+      toast.success("Deleted");
+      load();
+    } catch (e) {
+      toast.error("Failed to delete student");
+    }
   };
 
   const columns = [
