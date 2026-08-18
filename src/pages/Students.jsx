@@ -127,7 +127,14 @@ export default function Students() {
   };
 
   const save = async () => {
-    const payload = { ...form, fees_paid: Number(form.fees_paid) || 0, fees_total: Number(form.fees_total) || 0 };
+    // புதியதாக மாணவர் சேர்க்கப்படும்போது தற்போதைய தேதி மற்றும் நேரத்தை (Created Date & Time) சேர்த்தல்
+    const payload = { 
+      ...form, 
+      fees_paid: Number(form.fees_paid) || 0, 
+      fees_total: Number(form.fees_total) || 0,
+      created_at: editingId ? form.created_at : new Date().toISOString() 
+    };
+
     try {
       if (editingId) await api.put(`/students/${editingId}`, payload);
       else await api.post("/students", payload);
@@ -149,22 +156,43 @@ export default function Students() {
   };
 
   const columns = [
-    // --- S.No NaN வராமல் இருக்க rows.indexOf(r) பயன்படுத்தப்பட்டுள்ளது ---
+    // --- S.No சரியான முறையில் index மூலம் கொடுக்கப்பட்டுள்ளது ---
     { 
       key: "s_no", 
       header: "S.No", 
-      render: (r) => <span className="text-muted-foreground text-xs">{rows.indexOf(r) + 1}</span> 
+      render: (_, index) => <span className="text-muted-foreground text-xs">{index + 1}</span> 
     },
     { key: "student_id", header: "ID", render: (r) => <span className="font-mono-jb text-xs">{r.student_id}</span> },
     { key: "name", header: "Name", render: (r) => <span className="font-medium">{r.name}</span> },
     { key: "email", header: "Email", className: "text-muted-foreground" },
     { key: "course_code", header: "Course" },
     { key: "batch", header: "Batch", className: "text-muted-foreground" },
-    { key: "fees", header: "Fees", className: "text-right", render: (r) => (
-      <div className="text-right font-mono-jb text-xs">
-        ₹{(r.fees_paid || 0).toLocaleString("en-IN")} / ₹{(r.fees_total || 0).toLocaleString("en-IN")}
-      </div>
-    ) },
+    { 
+      key: "fees", 
+      header: "Fees", 
+      className: "text-right", 
+      render: (r) => (
+        <div className="text-right font-mono-jb text-xs">
+          ₹{(r.fees_paid || 0).toLocaleString("en-IN")} / ₹{(r.fees_total || 0).toLocaleString("en-IN")}
+        </div>
+      ) 
+    },
+    // --- Joined Date & Time நெடுவரிசை சேர்க்கப்பட்டுள்ளது ---
+    { 
+      key: "created_at", 
+      header: "Joined Date", 
+      render: (r) => (
+        <span className="text-muted-foreground text-xs">
+          {r.created_at ? new Date(r.created_at).toLocaleString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+          }) : "-"}
+        </span>
+      ) 
+    },
     { key: "status", header: "Status", render: (r) => <StatusBadge value={r.status} /> },
   ];
 
