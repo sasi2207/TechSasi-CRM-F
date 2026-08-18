@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, Users, UserCog, BookOpen, CalendarCheck, CreditCard,
-  Sparkles, Briefcase, ScrollText, Building2, Settings, TrendingUp, Award
+  Sparkles, Briefcase, ScrollText, Building2, Settings, TrendingUp, Award, UserPlus
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ const NAV = [
   { to: "/app/fees", label: "Fees", icon: CreditCard, testid: "nav-fees", roles: ["*"] },
   { to: "/app/certificates", label: "Certificates", icon: Award, testid: "nav-certificates", roles: ["*"] },
   { section: "HR & Agency" },
-  { to: "/app/staff", label: "Staff / HRMS", icon: UserCog, testid: "nav-staff", roles: ["*"] },
+  { to: "/app/staff", label: "Staff / HRMS", icon: UserCog, testid: "nav-staff", roles: ["admin", "super_admin", "hr"] },
   { to: "/app/projects", label: "Projects", icon: Briefcase, testid: "nav-projects", roles: ["*"] },
   { section: "Sales & Finance" },
   { to: "/app/leads", label: "CRM Leads", icon: TrendingUp, testid: "nav-leads", roles: ["*"] },
@@ -23,11 +23,20 @@ const NAV = [
   { section: "AI" },
   { to: "/app/ai", label: "AI Assistant", icon: Sparkles, testid: "nav-ai", roles: ["*"] },
   { section: "System" },
+  { to: "/app/register", label: "Register User", icon: UserPlus, testid: "nav-register", roles: ["admin", "super_admin", "hr"] },
   { to: "/app/settings", label: "Settings", icon: Settings, testid: "nav-settings", roles: ["*"] },
 ];
 
 export default function Sidebar({ onNavigate }) {
   const { user } = useAuth();
+  const userRole = user?.role || "staff";
+
+  // Filter navigation items based on user role
+  const filteredNav = NAV.filter((item) => {
+    if (item.section) return true; // Keep sections for now, can be cleaned if all items in section are hidden
+    if (!item.roles || item.roles.includes("*")) return true;
+    return item.roles.includes(userRole);
+  });
 
   return (
     <aside
@@ -45,7 +54,7 @@ export default function Sidebar({ onNavigate }) {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-        {NAV.map((item, i) =>
+        {filteredNav.map((item, i) =>
           item.section ? (
             <div key={`s-${i}`} className="pt-4 pb-1 px-2 text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
               {item.section}

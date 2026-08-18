@@ -1,24 +1,31 @@
 import { useEffect, useRef, useState } from "react";
 import api from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DataTable, { StatusBadge } from "@/components/DataTable";
 import CertificateTemplate from "@/components/CertificateTemplate";
-import { Award, Download, Eye, Trash2, Printer } from "lucide-react";
+import { Award, Download, Eye, Trash2, Printer, Pencil, History } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Certificates() {
+  const { user } = useAuth();
   const [rows, setRows] = useState([]);
   const [students, setStudents] = useState([]);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [issueOpen, setIssueOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState(null);
+  const [selectedHistory, setSelectedHistory] = useState([]);
+  const [selectedCertTitle, setSelectedCertTitle] = useState("");
+  
   const [exporting, setExporting] = useState(false);
   const certRef = useRef(null);
 
@@ -36,6 +43,19 @@ export default function Certificates() {
     manager_title: "Training Manager",
   });
 
+  const [editForm, setEditForm] = useState({
+    id: null,
+    certificate_id: "",
+    program_type: "Internship Training",
+    start_date: today,
+    end_date: today,
+    issued_by_name: "",
+    issued_by_title: "",
+    manager_name: "",
+    manager_title: "",
+    edit_history: []
+  });
+
   const load = async () => {
     setLoading(true);
     try {
@@ -47,8 +67,13 @@ export default function Certificates() {
       setRows(c.data);
       setStudents(s.data);
       setCourses(co.data);
-    } finally { setLoading(false); }
+    } catch (err) {
+      toast.error("Failed to load certificates");
+    } finally { 
+      setLoading(false); 
+    }
   };
+
   useEffect(() => { load(); }, []);
 
   const openIssue = () => {
@@ -69,15 +94,89 @@ export default function Certificates() {
   };
 
   const issue = async () => {
+    const currentUserName = user?.name || user?.email || "System User";
+    const currentTime = new Date().toISOString();
+
+    const initialHistoryEntry = {
+      edited_by: currentUserName,
+      edited_at: currentTime,
+      action: "Issue Certificate",
+      changes: `Issued certificate for program type: ${form.program_type}`
+    };
+
     try {
-      const { data } = await api.post("/certificates/issue", form);
+      const { data } = await api.post("/certificates/issue", {
+        ...form,
+        created_by: currentUserName,
+        created_at: currentTime,
+        updated_by: currentUserName,
+        updated_at: currentTime,
+        edit_history: [initialHistoryEntry]
+      });
       toast.success(`Certificate ${data.certificate_id} issued`);
       setIssueOpen(false);
       await load();
       openPreview(data);
     } catch (e) {
-      toast.error(e.response?.data?.detail || "Failed");
+      toast.error(e.response?.data?.detail || "Failed to issue certificate");
     }
+  };
+
+  const openEdit = (row) => {
+    setEditForm({
+      id: row.id,
+      certificate_id: row.certificate_id,
+      program_type: row.program_type || "Internship Training",
+      start_date: row.start_date || today,
+      end_date: row.end_date || today,
+      issued_by_name: row.issued_by_name || "",
+      issued_by_title: row.issued_by_title || "",
+      manager_name: row.manager_name || "",
+      manager_title: row.manager_title || "",
+      edit_history: row.edit_history || []
+    });
+    setEditOpen(true);
+  };
+
+  const updateCertificate = async () => {
+    const currentUserName = user?.name || user?.email || "System User";
+    const currentTime = new Date().toISOString();
+
+    const existingHistory = editForm.edit_history || [];
+    const newHistoryEntry = {
+      edited_by: currentUserName,
+      edited_at: currentTime,
+      action: "Update Certificate",
+      changes: `Updated signatory or dates for program: ${editForm.program_type}`
+    };
+
+    const updatedHistory = [newHistoryEntry, ...existingHistory];
+
+    try {
+      await api.put(`/certificates/${editForm.id}`, {
+        program_type: editForm.program_type,
+        start_date: editForm.start_date,
+        end_date: editForm.end_date,
+        issued_by_name: editForm.issued_by_name,
+        issued_by_title: editForm.issued_by_title,
+        manager_name: editForm.manager_name,
+        manager_title: editForm.manager_title,
+        updated_by: currentUserName,
+        updated_at: currentTime,
+        edit_history: updatedHistory
+      });
+      toast.success("Certificate updated successfully");
+      setEditOpen(false);
+      load();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Failed to update certificate");
+    }
+  };
+
+  const openHistory = (row) => {
+    setSelectedCertTitle(`${row.certificate_id} - ${row.student_name}`);
+    setSelectedHistory(row.edit_history || []);
+    setHistoryOpen(true);
   };
 
   const openPreview = (row) => {
@@ -87,9 +186,13 @@ export default function Certificates() {
 
   const revoke = async (id) => {
     if (!confirm("Revoke this certificate? This action cannot be undone.")) return;
-    await api.delete(`/certificates/${id}`);
-    toast.success("Certificate revoked");
-    load();
+    try {
+      await api.delete(`/certificates/${id}`);
+      toast.success("Certificate revoked");
+      load();
+    } catch (e) {
+      toast.error("Failed to revoke certificate");
+    }
   };
 
   const downloadPDF = async () => {
@@ -148,9 +251,11 @@ export default function Certificates() {
         searchKeys={["certificate_id", "student_name", "course_title"]}
         rowActions={(row) => (
           <div className="flex justify-end gap-1">
-            <Button size="icon" variant="ghost" data-testid={`preview-cert-${row.id}`} onClick={() => openPreview(row)}><Eye className="w-4 h-4" /></Button>
+            <Button size="icon" variant="ghost" title="View Certificate" data-testid={`preview-cert-${row.id}`} onClick={() => openPreview(row)}><Eye className="w-4 h-4" /></Button>
+            <Button size="icon" variant="ghost" title="Edit Certificate Details" onClick={() => openEdit(row)}><Pencil className="w-4 h-4 text-muted-foreground" /></Button>
+            <Button size="icon" variant="ghost" title="View Audit Logs" onClick={() => openHistory(row)}><History className="w-4 h-4 text-muted-foreground" /></Button>
             {row.status !== "revoked" && (
-              <Button size="icon" variant="ghost" onClick={() => revoke(row.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+              <Button size="icon" variant="ghost" title="Revoke Certificate" onClick={() => revoke(row.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
             )}
           </div>
         )}
@@ -229,6 +334,87 @@ export default function Certificates() {
             <Button data-testid="cert-issue-save" className="btn-gradient" onClick={issue} disabled={!form.student_id || !form.course_code}>
               <Award className="w-4 h-4 mr-1" /> Issue certificate
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Pencil className="w-5 h-5 text-primary" /> Edit Certificate</DialogTitle>
+            <DialogDescription>Updating details for {editForm.certificate_id}</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <Label>Program type</Label>
+              <Select value={editForm.program_type} onValueChange={(v) => setEditForm({ ...editForm, program_type: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Internship Training">Internship Training</SelectItem>
+                  <SelectItem value="Course Completion">Course Completion</SelectItem>
+                  <SelectItem value="Workshop Attendance">Workshop Attendance</SelectItem>
+                  <SelectItem value="Bootcamp Program">Bootcamp Program</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Start date</Label>
+              <Input type="date" value={editForm.start_date} onChange={(e) => setEditForm({ ...editForm, start_date: e.target.value })} />
+            </div>
+            <div>
+              <Label>End date</Label>
+              <Input type="date" value={editForm.end_date} onChange={(e) => setEditForm({ ...editForm, end_date: e.target.value })} />
+            </div>
+            <div>
+              <Label>Signatory (Founder)</Label>
+              <Input value={editForm.issued_by_name} onChange={(e) => setEditForm({ ...editForm, issued_by_name: e.target.value })} />
+            </div>
+            <div>
+              <Label>Signatory title</Label>
+              <Input value={editForm.issued_by_title} onChange={(e) => setEditForm({ ...editForm, issued_by_title: e.target.value })} />
+            </div>
+            <div>
+              <Label>Training Manager</Label>
+              <Input value={editForm.manager_name} onChange={(e) => setEditForm({ ...editForm, manager_name: e.target.value })} />
+            </div>
+            <div>
+              <Label>Manager title</Label>
+              <Input value={editForm.manager_title} onChange={(e) => setEditForm({ ...editForm, manager_title: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button className="btn-gradient" onClick={updateCertificate}>Update Certificate</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Audit History dialog */}
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><History className="w-5 h-5 text-primary" /> Certificate Audit Logs</DialogTitle>
+            <DialogDescription>{selectedCertTitle}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto">
+            {selectedHistory.length > 0 ? (
+              selectedHistory.map((log, idx) => (
+                <div key={idx} className="p-3 rounded-lg border bg-muted/30 text-xs space-y-1">
+                  <div className="flex justify-between font-semibold text-foreground">
+                    <span>{log.edited_by || "System"}</span>
+                    <span className="text-muted-foreground">{log.edited_at ? new Date(log.edited_at).toLocaleString("en-IN") : ""}</span>
+                  </div>
+                  <div className="text-primary font-medium">Action: {log.action}</div>
+                  <div className="text-muted-foreground">{log.changes}</div>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-xs text-muted-foreground py-4">No logs available for this certificate.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHistoryOpen(false)} className="w-full">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -4,14 +4,13 @@ import { useAuth, formatApiErrorDetail } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Building2 } from "lucide-react";
+import { Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "student" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "staff" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -21,7 +20,7 @@ export default function Register() {
     setLoading(true);
     try {
       await register(form);
-      toast.success("Account created!");
+      toast.success("Account created successfully!");
       navigate("/app");
     } catch (err) {
       const msg = formatApiErrorDetail(err.response?.data?.detail) || err.message;
@@ -33,58 +32,108 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen auth-bg flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        <Link to="/" className="flex items-center gap-3 mb-8">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#FF6B00] to-[#FF8C33] flex items-center justify-center shadow-lg shadow-primary/20">
-            <Building2 className="w-5 h-5 text-white" />
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div>
+        <div className="text-xs uppercase tracking-widest text-muted-foreground">Administration</div>
+        <h1 className="font-outfit text-3xl font-semibold tracking-tight mt-1 flex items-center gap-2">
+          <UserPlus className="w-7 h-7 text-primary" />
+          Register New User
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">Create accounts for staff members, trainers, HR, or administrators.</p>
+      </div>
+
+      <div className="rounded-2xl bg-card border border-border shadow-sm p-6 sm:p-8">
+        <form onSubmit={submit} className="space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="name">Full Name</Label>
+              <Input 
+                id="name" 
+                data-testid="reg-name-input" 
+                placeholder="Enter full name"
+                value={form.name} 
+                required 
+                minLength={2} 
+                onChange={(e) => setForm({ ...form, name: e.target.value })} 
+                className="mt-1.5" 
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="email">Email Address</Label>
+              <Input 
+                id="email" 
+                data-testid="reg-email-input" 
+                type="email" 
+                placeholder="user@techsasi.com"
+                value={form.email} 
+                required 
+                onChange={(e) => setForm({ ...form, email: e.target.value })} 
+                className="mt-1.5" 
+              />
+            </div>
           </div>
-          <div>
-            <div className="font-outfit font-semibold text-lg leading-tight">Join TechSasi</div>
-            <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Learn · Build · Grow</div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="password">Password (min 6 chars)</Label>
+              <Input 
+                id="password" 
+                data-testid="reg-password-input" 
+                type="password" 
+                placeholder="••••••••"
+                value={form.password} 
+                required 
+                minLength={6} 
+                onChange={(e) => setForm({ ...form, password: e.target.value })} 
+                className="mt-1.5" 
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="role">User Role</Label>
+              <select 
+                id="role"
+                data-testid="reg-role-select"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1.5"
+                value={form.role} 
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+              >
+                <option value="staff">Staff</option>
+                <option value="trainer">Trainer</option>
+                <option value="hr">HR</option>
+                <option value="admin">Admin</option>
+                <option value="super_admin">Super Admin</option>
+                <option value="student">Student</option>
+                <option value="client">Client</option>
+              </select>
+            </div>
           </div>
-        </Link>
 
-        <div className="rounded-2xl bg-card border border-border shadow-xl p-8">
-          <h1 className="font-outfit text-2xl font-semibold tracking-tight">Create your account</h1>
-          <form onSubmit={submit} className="mt-6 space-y-4">
-            <div>
-              <Label htmlFor="name">Full name</Label>
-              <Input id="name" data-testid="reg-name-input" value={form.name} required minLength={2} onChange={(e) => setForm({ ...form, name: e.target.value })} className="mt-1.5" />
+          {error && (
+            <div data-testid="reg-error" className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2.5">
+              {error}
             </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" data-testid="reg-email-input" type="email" value={form.email} required onChange={(e) => setForm({ ...form, email: e.target.value })} className="mt-1.5" />
-            </div>
-            <div>
-              <Label htmlFor="password">Password (min 6)</Label>
-              <Input id="password" data-testid="reg-password-input" type="password" value={form.password} required minLength={6} onChange={(e) => setForm({ ...form, password: e.target.value })} className="mt-1.5" />
-            </div>
-            <div>
-              <Label>Role</Label>
-              <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
-                <SelectTrigger data-testid="reg-role-select" className="mt-1.5">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="student">Student</SelectItem>
-                  <SelectItem value="client">Client</SelectItem>
-                  <SelectItem value="guest">Guest</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          )}
 
-            {error && <div data-testid="reg-error" className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2">{error}</div>}
-
-            <Button type="submit" data-testid="reg-submit-btn" disabled={loading} className="w-full h-11 rounded-full btn-gradient text-white font-medium">
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create account"}
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              onClick={() => navigate(-1)}
+            >
+              Cancel
             </Button>
-          </form>
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link to="/login" className="text-primary font-medium hover:underline">Sign in</Link>
+            <Button 
+              type="submit" 
+              data-testid="reg-submit-btn" 
+              disabled={loading} 
+              className="btn-gradient px-6"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Account"}
+            </Button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

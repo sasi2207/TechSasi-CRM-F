@@ -42,7 +42,7 @@ function AppRoutes() {
       <Route path="/" element={<Landing />} />
       <Route path="/verify/:token" element={<VerifyCertificate />} />
       <Route path="/login" element={user ? <Navigate to="/app" replace /> : <Login />} />
-      <Route path="/register" element={user ? <Navigate to="/app" replace /> : <Register />} />
+      {/* Note: Public /register if needed standalone, otherwise handled inside /app/register */}
 
       <Route path="/app" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
         <Route index element={<Dashboard />} />
@@ -57,6 +57,9 @@ function AppRoutes() {
         <Route path="ai" element={<AIAssistant />} />
         <Route path="certificates" element={<Certificates />} />
         <Route path="settings" element={<Settings />} />
+        
+        {/* 👇 FIXED: Moved register inside /app so sidebar link '/app/register' works correctly with layout */}
+        <Route path="register" element={<Register />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
