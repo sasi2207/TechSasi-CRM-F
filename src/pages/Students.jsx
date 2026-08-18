@@ -8,7 +8,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
-const empty = { student_id: "", name: "", email: "", phone: "", course_code: "", batch: "", status: "active", fees_paid: 0, fees_total: 0 };
+const empty = { 
+  student_id: "", 
+  name: "", 
+  email: "", 
+  phone: "", 
+  course_code: "", 
+  batch: "", 
+  status: "active", 
+  fees_paid: 0, 
+  fees_total: 0,
+  discount_percent: 0 // புதிய தள்ளுபடி சதவீதம்
+};
 
 export default function Students() {
   const [rows, setRows] = useState([]);
@@ -33,7 +44,7 @@ export default function Students() {
       }
       setRows(finalRows);
 
-      // 2. Database-லிருந்து கோர்ஸ்களை ஏற்றுதல்
+      // 2. Database-லிருந்து கோர்ஸ்களை அவற்றின் உண்மையான கட்டணத்துடன் ஏற்றுதல்
       try {
         const resCourses = await api.get("/courses");
         const courseData = resCourses.data;
@@ -45,11 +56,13 @@ export default function Students() {
           fetchedCourses = courseData.data || courseData.courses || Object.values(courseData).find(Array.isArray) || [];
         }
         
-        // கோர்ஸின் பெயரை மட்டுமே value-வாகவும் text-ாகவும் பயன்படுத்துதல்
         const formattedFetched = fetchedCourses.map(c => {
           const courseName = c.name || c.title || c.code || "";
-          return {
-            name: courseName
+          // டேட்டாபேஸில் உள்ள கோர்ஸ் கட்டணத்தை எடுத்தல் (fees அல்லது fees_total அல்லது price)
+          const courseFee = Number(c.fees || c.fees_total || c.price || 0);
+          return { 
+            name: courseName,
+            fee: courseFee 
           };
         });
         
@@ -93,20 +106,64 @@ export default function Students() {
 
   const openAdd = () => {
     const nextId = generateStudentId(rows);
-    const defaultCourse = courses.length > 0 ? courses[0].name : "";
-    setForm({ ...empty, student_id: nextId, course_code: defaultCourse });
+    const defaultCourse = courses.length > 0 ? courses[0] : null;
+    const defaultFee = defaultCourse ? defaultCourse.fee : 0;
+    
+    setForm({ 
+      ...empty, 
+      student_id: nextId, 
+      course_code: defaultCourse ? defaultCourse.name : "",
+      fees_total: defaultFee,
+      discount_percent: 0
+    });
     setEditingId(null);
     setOpen(true);
   };
 
   const openEdit = (r) => { 
-    setForm({ ...empty, ...r }); 
+    setForm({ ...empty, ...r, discount_percent: r.discount_percent || 0 }); 
     setEditingId(r.id); 
     setOpen(true); 
   };
 
+  // கோர்ஸ் மாறும்போது அதன் கட்டணத்தை ஆட்டோமேட்டிக்காக ஃபார்மில் செட் செய்வதுடன், தள்ளுபடியையும் கணக்கிடுதல்
+  const handleCourseChange = (courseName) => {
+    const selected = courses.find(c => c.name === courseName);
+    const originalFee = selected ? selected.fee : 0;
+    const discount = Number(form.discount_percent) || 0;
+    
+    // தள்ளுபடி போக மீதமுள்ள கட்டணம்
+    const finalFee = originalFee - (originalFee * discount) / 100;
+
+    setForm({ 
+      ...form, 
+      course_code: courseName, 
+      fees_total: Math.round(finalFee) 
+    });
+  };
+
+  // தள்ளுபடி சதவீதம் மாறும்போது இறுதி கட்டணத்தை கணக்கிடுதல்
+  const handleDiscountChange = (discountVal) => {
+    const discount = Number(discountVal) || 0;
+    const selected = courses.find(c => c.name === form.course_code);
+    const originalFee = selected ? selected.fee : Number(form.fees_total) || 0;
+    
+    const finalFee = originalFee - (originalFee * discount) / 100;
+
+    setForm({
+      ...form,
+      discount_percent: discountVal,
+      fees_total: Math.round(finalFee)
+    });
+  };
+
   const save = async () => {
-    const payload = { ...form, fees_paid: Number(form.fees_paid) || 0, fees_total: Number(form.fees_total) || 0 };
+    const payload = { 
+      ...form, 
+      fees_paid: Number(form.fees_paid) || 0, 
+      fees_total: Number(form.fees_total) || 0,
+      discount_percent: Number(form.discount_percent) || 0
+    };
     try {
       if (editingId) await api.put(`/students/${editingId}`, payload);
       else await api.post("/students", payload);
@@ -198,19 +255,19 @@ export default function Students() {
               <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
             
-            {/* Responsive Course Name Dropdown (Code hidden completely) */}
+            {/* Course Name Dropdown (Auto-fills Fees) */}
             <div className="col-span-1">
               <Label>Course</Label>
               <select 
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 truncate"
                 value={form.course_code}
-                onChange={(e) => setForm({ ...form, course_code: e.target.value })}
+                onChange={(e) => handleCourseChange(e.target.value)}
               >
                 <option value="">Select Course</option>
                 {courses.length > 0 ? (
                   courses.map((c, index) => (
                     <option key={index} value={c.name}>
-                      {c.name}
+                      {c.name} {c.fee ? `(₹${c.fee})` : ""}
                     </option>
                   ))
                 ) : (
@@ -229,13 +286,24 @@ export default function Students() {
               <Input value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} />
             </div>
 
+            {/* Discount Percentage Input */}
+            <div className="col-span-1">
+              <Label>Discount (%)</Label>
+              <Input 
+                type="number" 
+                placeholder="e.g. 10" 
+                value={form.discount_percent} 
+                onChange={(e) => handleDiscountChange(e.target.value)} 
+              />
+            </div>
+
             <div className="col-span-1">
               <Label>Fees Paid</Label>
               <Input type="number" value={form.fees_paid} onChange={(e) => setForm({ ...form, fees_paid: e.target.value })} />
             </div>
 
             <div className="col-span-1">
-              <Label>Fees Total</Label>
+              <Label>Fees Total (After Discount)</Label>
               <Input type="number" value={form.fees_total} onChange={(e) => setForm({ ...form, fees_total: e.target.value })} />
             </div>
           </div>
