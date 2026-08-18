@@ -42,8 +42,40 @@ export default function Students() {
 
   useEffect(() => { load(); }, []);
 
-  const openAdd = () => { setForm(empty); setEditingId(null); setOpen(true); };
-  const openEdit = (r) => { setForm({ ...empty, ...r }); setEditingId(r.id); setOpen(true); };
+  // --- Auto-generate Student ID (TS-STU-00001 format) ---
+  const generateStudentId = (existingRows) => {
+    if (!existingRows || existingRows.length === 0) {
+      return "TS-STU-00001";
+    }
+
+    // ஏற்கனவே உள்ள IDs-லிருந்து நம்பர்களை மட்டும் பிரித்து அதிகபட்ச நம்பரைக் கண்டறிதல்
+    let maxNum = 0;
+    existingRows.forEach((row) => {
+      if (row.student_id && row.student_id.startsWith("TS-STU-")) {
+        const numStr = row.student_id.replace("TS-STU-", "");
+        const num = parseInt(numStr, 10);
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num;
+        }
+      }
+    });
+
+    const nextNum = maxNum + 1;
+    return `TS-STU-${String(nextNum).padStart(5, "0")}`;
+  };
+
+  const openAdd = () => {
+    const nextId = generateStudentId(rows);
+    setForm({ ...empty, student_id: nextId });
+    setEditingId(null);
+    setOpen(true);
+  };
+
+  const openEdit = (r) => { 
+    setForm({ ...empty, ...r }); 
+    setEditingId(r.id); 
+    setOpen(true); 
+  };
 
   const save = async () => {
     const payload = { ...form, fees_paid: Number(form.fees_paid) || 0, fees_total: Number(form.fees_total) || 0 };
@@ -110,7 +142,16 @@ export default function Students() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-1"><Label>Student ID</Label><Input data-testid="student-id-input" value={form.student_id} onChange={(e) => setForm({ ...form, student_id: e.target.value })} /></div>
+            <div className="col-span-1">
+              <Label>Student ID</Label>
+              <Input 
+                data-testid="student-id-input" 
+                value={form.student_id} 
+                readOnly={!editingId} // புதிய மாணவர் சேர்க்கும்போது ID-யை மாற்ற முடியாது (Auto-generated), Edit செய்யும்போது மாற்றிக்கொள்ளலாம்
+                className={!editingId ? "bg-muted cursor-not-allowed font-mono-jb" : "font-mono-jb"}
+                onChange={(e) => setForm({ ...form, student_id: e.target.value })} 
+              />
+            </div>
             <div className="col-span-1"><Label>Name</Label><Input data-testid="student-name-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
             <div className="col-span-2"><Label>Email</Label><Input data-testid="student-email-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
             <div className="col-span-1"><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
