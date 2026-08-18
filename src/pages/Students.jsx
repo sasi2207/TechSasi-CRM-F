@@ -149,11 +149,11 @@ export default function Students() {
   };
 
   const columns = [
-    // --- S.No Column Added ---
+    // --- S.No NaN வராமல் இருக்க rows.indexOf(r) பயன்படுத்தப்பட்டுள்ளது ---
     { 
       key: "s_no", 
       header: "S.No", 
-      render: (_, index) => <span className="text-muted-foreground text-xs">{index + 1}</span> 
+      render: (r) => <span className="text-muted-foreground text-xs">{rows.indexOf(r) + 1}</span> 
     },
     { key: "student_id", header: "ID", render: (r) => <span className="font-mono-jb text-xs">{r.student_id}</span> },
     { key: "name", header: "Name", render: (r) => <span className="font-medium">{r.name}</span> },
