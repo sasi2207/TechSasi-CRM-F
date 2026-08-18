@@ -10,23 +10,23 @@ import { toast } from "sonner";
 
 const empty = { student_id: "", name: "", email: "", phone: "", course_code: "", batch: "", status: "active", fees_paid: 0, fees_total: 0 };
 
-// நீங்கள் கேட்ட அனைத்து கோர்ஸ்களின் பட்டியல் (Default Courses List)
+// கோர்ஸ்களின் பட்டியல் (Default Courses List - கோட் பெயர்கள் நீக்கப்பட்டு பெயர்கள் மட்டும்)
 const DEFAULT_COURSES = [
-  { code: "REACT", name: "React.js Development" },
-  { code: "PYTHON-FS", name: "Python Full Stack" },
-  { code: "JAVA-FS", name: "Java Full Stack" },
-  { code: "MERN", name: "MERN Stack" },
-  { code: "UI-UX", name: "UI/UX Design" },
-  { code: "AWS", name: "AWS Cloud" },
-  { code: "C", name: "C Programming" },
-  { code: "CPP", name: "C++ Programming" },
-  { code: "BASIC-COMP", name: "Basic Computer" },
-  { code: "ADV-COMP", name: "Advanced Computer" },
+  { code: "React.js Development", name: "React.js Development" },
+  { code: "Python Full Stack", name: "Python Full Stack" },
+  { code: "Java Full Stack", name: "Java Full Stack" },
+  { code: "MERN Stack", name: "MERN Stack" },
+  { code: "UI/UX Design", name: "UI/UX Design" },
+  { code: "AWS Cloud", name: "AWS Cloud" },
+  { code: "C Programming", name: "C Programming" },
+  { code: "C++ Programming", name: "C++ Programming" },
+  { code: "Basic Computer", name: "Basic Computer" },
+  { code: "Advanced Computer", name: "Advanced Computer" },
 ];
 
 export default function Students() {
   const [rows, setRows] = useState([]);
-  const [courses, setCourses] = useState(DEFAULT_COURSES); // Default கோர்ஸ்கள் இணைக்கப்பட்டுள்ளது
+  const [courses] = useState(DEFAULT_COURSES); 
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(empty);
@@ -35,7 +35,7 @@ export default function Students() {
   const load = async () => {
     setLoading(true);
     try { 
-      // 1. மாணவர்களின் விவரங்களை ஏற்றுதல்
+      // மாணவர்களின் விவரங்களை மட்டும் ஏற்றுதல்
       const resStudents = await api.get("/students");
       const rawData = resStudents.data;
       let finalRows = [];
@@ -46,30 +46,6 @@ export default function Students() {
         finalRows = rawData.data || rawData.students || Object.values(rawData).find(Array.isArray) || [];
       }
       setRows(finalRows);
-
-      // 2. Backend-லிருந்து கோர்ஸ்கள் இருந்தால் அதையும் சேர்த்துக்கொள்ளலாம் (Optional)
-      try {
-        const resCourses = await api.get("/courses");
-        const courseData = resCourses.data;
-        let fetchedCourses = [];
-        if (Array.isArray(courseData)) {
-          fetchedCourses = courseData;
-        } else if (courseData && typeof courseData === "object") {
-          fetchedCourses = courseData.data || courseData.courses || Object.values(courseData).find(Array.isArray) || [];
-        }
-        
-        // Backend கோர்ஸ்கள் இருந்தால் அவையும் DEFAULT_COURSES-உடன் இணைந்து கொள்ளும்
-        if (fetchedCourses.length > 0) {
-          const formattedFetched = fetchedCourses.map(c => ({
-            code: c.code || c.course_code || c.id,
-            name: c.name || c.title || c.code
-          }));
-          // இரண்டையும் இணைத்தல் (Duplicate தவிர்க்கலாம் அல்லது இவ்வாறே வைக்கலாம்)
-          setCourses([...DEFAULT_COURSES, ...formattedFetched]);
-        }
-      } catch (err) {
-        console.error("Using default course list:", err);
-      }
 
     } catch (err) {
       console.error("Failed to load students:", err);
@@ -196,7 +172,7 @@ export default function Students() {
             <div className="col-span-2"><Label>Email</Label><Input data-testid="student-email-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
             <div className="col-span-1"><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
             
-            {/* Course Code Dropdown with All Required Courses */}
+            {/* Course Dropdown (Course Names Only) */}
             <div className="col-span-1">
               <Label>Course</Label>
               <select 
@@ -207,7 +183,7 @@ export default function Students() {
                 <option value="">Select Course</option>
                 {courses.map((c, index) => (
                   <option key={index} value={c.code}>
-                    {c.name} ({c.code})
+                    {c.name}
                   </option>
                 ))}
               </select>
