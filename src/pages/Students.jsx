@@ -48,7 +48,6 @@ export default function Students() {
         // கோர்ஸின் பெயர் மற்றும் கட்டணத்தை (fee) சேர்த்து ஃபார்மட் செய்தல்
         const formattedFetched = fetchedCourses.map(c => {
           const courseName = c.name || c.title || c.code || "";
-          // கோர்ஸ் டேபிளில் உள்ள கட்டணப் புலத்தை (fee, fees, price) எடுக்கவும்
           const courseFee = Number(c.fee || c.fees || c.price || c.fees_total || 0);
           return {
             name: courseName,
@@ -150,6 +149,12 @@ export default function Students() {
   };
 
   const columns = [
+    // --- S.No Column Added ---
+    { 
+      key: "s_no", 
+      header: "S.No", 
+      render: (_, index) => <span className="text-muted-foreground text-xs">{index + 1}</span> 
+    },
     { key: "student_id", header: "ID", render: (r) => <span className="font-mono-jb text-xs">{r.student_id}</span> },
     { key: "name", header: "Name", render: (r) => <span className="font-medium">{r.name}</span> },
     { key: "email", header: "Email", className: "text-muted-foreground" },
@@ -220,7 +225,6 @@ export default function Students() {
               <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
             
-            {/* Course Dropdown - handles dynamic fee updating */}
             <div className="col-span-1">
               <Label>Course</Label>
               <select 
