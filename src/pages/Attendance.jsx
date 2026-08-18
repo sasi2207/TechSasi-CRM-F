@@ -13,7 +13,7 @@ export default function Attendance() {
   const [summary, setSummary] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // முந்தைய தேதிகளை (Past dates) எடிட் செய்யக் கூடாது என்பதற்கான கண்டிஷன்
+  // Past dates check condition
   const isPastDate = date < today;
 
   const load = async () => {
@@ -50,7 +50,7 @@ export default function Attendance() {
     { 
       key: "s_no", 
       header: "S.No", 
-      render: (r) => <span className="text-muted-foreground text-xs">{students.indexOf(r) + 1}</span> 
+      render: (_, index) => <span className="text-muted-foreground text-xs">{index + 1}</span> 
     },
     { key: "student_id", header: "ID", render: (r) => <span className="font-mono-jb text-xs">{r.student_id}</span> },
     { key: "name", header: "Student", render: (r) => <span className="font-medium">{r.name}</span> },
