@@ -17,8 +17,8 @@ const empty = {
   batch: "", 
   status: "active", 
   fees_paid: 0, 
-  fees_total: 0,
-  discount_percent: 0 // புதிய தள்ளுபடி சதவீதம்
+  fees_total: 0, 
+  discount_percent: 0 
 };
 
 export default function Students() {
@@ -44,7 +44,7 @@ export default function Students() {
       }
       setRows(finalRows);
 
-      // 2. Database-லிருந்து கோர்ஸ்களை அவற்றின் உண்மையான கட்டணத்துடன் ஏற்றுதல்
+      // 2. Database-லிருந்து கோர்ஸ்களை அவற்றின் அசல் கட்டணத்துடன் ஏற்றுதல்
       try {
         const resCourses = await api.get("/courses");
         const courseData = resCourses.data;
@@ -58,11 +58,11 @@ export default function Students() {
         
         const formattedFetched = fetchedCourses.map(c => {
           const courseName = c.name || c.title || c.code || "";
-          // டேட்டாபேஸில் உள்ள கோர்ஸ் கட்டணத்தை எடுத்தல் (fees அல்லது fees_total அல்லது price)
-          const courseFee = Number(c.fees || c.fees_total || c.price || 0);
+          // கோர்ஸின் அசல் கட்டணம் (Base Fee)
+          const baseFee = Number(c.fees || c.fees_total || c.price || 0);
           return { 
             name: courseName,
-            fee: courseFee 
+            base_fee: baseFee 
           };
         });
         
@@ -107,13 +107,13 @@ export default function Students() {
   const openAdd = () => {
     const nextId = generateStudentId(rows);
     const defaultCourse = courses.length > 0 ? courses[0] : null;
-    const defaultFee = defaultCourse ? defaultCourse.fee : 0;
+    const defaultBaseFee = defaultCourse ? defaultCourse.base_fee : 0;
     
     setForm({ 
       ...empty, 
       student_id: nextId, 
       course_code: defaultCourse ? defaultCourse.name : "",
-      fees_total: defaultFee,
+      fees_total: defaultBaseFee,
       discount_percent: 0
     });
     setEditingId(null);
@@ -126,14 +126,13 @@ export default function Students() {
     setOpen(true); 
   };
 
-  // கோர்ஸ் மாறும்போது அதன் கட்டணத்தை ஆட்டோமேட்டிக்காக ஃபார்மில் செட் செய்வதுடன், தள்ளுபடியையும் கணக்கிடுதல்
+  // கோர்ஸ் மாறும்போது அசல் கட்டணத்தை எடுத்து, தள்ளுபடி போக இறுதி கட்டணத்தை கணக்கிடுதல்
   const handleCourseChange = (courseName) => {
     const selected = courses.find(c => c.name === courseName);
-    const originalFee = selected ? selected.fee : 0;
+    const baseFee = selected ? selected.base_fee : 0;
     const discount = Number(form.discount_percent) || 0;
     
-    // தள்ளுபடி போக மீதமுள்ள கட்டணம்
-    const finalFee = originalFee - (originalFee * discount) / 100;
+    const finalFee = baseFee - (baseFee * discount) / 100;
 
     setForm({ 
       ...form, 
@@ -146,9 +145,9 @@ export default function Students() {
   const handleDiscountChange = (discountVal) => {
     const discount = Number(discountVal) || 0;
     const selected = courses.find(c => c.name === form.course_code);
-    const originalFee = selected ? selected.fee : Number(form.fees_total) || 0;
+    const baseFee = selected ? selected.base_fee : Number(form.fees_total) || 0;
     
-    const finalFee = originalFee - (originalFee * discount) / 100;
+    const finalFee = baseFee - (baseFee * discount) / 100;
 
     setForm({
       ...form,
@@ -255,7 +254,7 @@ export default function Students() {
               <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
             
-            {/* Course Name Dropdown (Auto-fills Fees) */}
+            {/* Course Name Dropdown (Code hidden completely) */}
             <div className="col-span-1">
               <Label>Course</Label>
               <select 
@@ -267,7 +266,7 @@ export default function Students() {
                 {courses.length > 0 ? (
                   courses.map((c, index) => (
                     <option key={index} value={c.name}>
-                      {c.name} {c.fee ? `(₹${c.fee})` : ""}
+                      {c.name}
                     </option>
                   ))
                 ) : (
@@ -286,12 +285,11 @@ export default function Students() {
               <Input value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} />
             </div>
 
-            {/* Discount Percentage Input */}
+            {/* Discount Percentage */}
             <div className="col-span-1">
               <Label>Discount (%)</Label>
               <Input 
                 type="number" 
-                placeholder="e.g. 10" 
                 value={form.discount_percent} 
                 onChange={(e) => handleDiscountChange(e.target.value)} 
               />
@@ -302,9 +300,15 @@ export default function Students() {
               <Input type="number" value={form.fees_paid} onChange={(e) => setForm({ ...form, fees_paid: e.target.value })} />
             </div>
 
+            {/* Total Fees (After Discount) */}
             <div className="col-span-1">
-              <Label>Fees Total (After Discount)</Label>
-              <Input type="number" value={form.fees_total} onChange={(e) => setForm({ ...form, fees_total: e.target.value })} />
+              <Label>Total Fees (Payable)</Label>
+              <Input 
+                type="number" 
+                value={form.fees_total} 
+                readOnly 
+                className="bg-muted cursor-not-allowed font-bold"
+              />
             </div>
           </div>
 
