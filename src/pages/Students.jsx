@@ -10,9 +10,23 @@ import { toast } from "sonner";
 
 const empty = { student_id: "", name: "", email: "", phone: "", course_code: "", batch: "", status: "active", fees_paid: 0, fees_total: 0 };
 
+// நீங்கள் கேட்ட அனைத்து கோர்ஸ்களின் பட்டியல் (Default Courses List)
+const DEFAULT_COURSES = [
+  { code: "REACT", name: "React.js Development" },
+  { code: "PYTHON-FS", name: "Python Full Stack" },
+  { code: "JAVA-FS", name: "Java Full Stack" },
+  { code: "MERN", name: "MERN Stack" },
+  { code: "UI-UX", name: "UI/UX Design" },
+  { code: "AWS", name: "AWS Cloud" },
+  { code: "C", name: "C Programming" },
+  { code: "CPP", name: "C++ Programming" },
+  { code: "BASIC-COMP", name: "Basic Computer" },
+  { code: "ADV-COMP", name: "Advanced Computer" },
+];
+
 export default function Students() {
   const [rows, setRows] = useState([]);
-  const [courses, setCourses] = useState([]); // கோர்ஸ்களை சேமிக்க
+  const [courses, setCourses] = useState(DEFAULT_COURSES); // Default கோர்ஸ்கள் இணைக்கப்பட்டுள்ளது
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(empty);
@@ -33,17 +47,28 @@ export default function Students() {
       }
       setRows(finalRows);
 
-      // 2. கோர்ஸ்களின் விவரங்களை ஏற்றுதல் (Dropdown-க்காக)
+      // 2. Backend-லிருந்து கோர்ஸ்கள் இருந்தால் அதையும் சேர்த்துக்கொள்ளலாம் (Optional)
       try {
         const resCourses = await api.get("/courses");
         const courseData = resCourses.data;
+        let fetchedCourses = [];
         if (Array.isArray(courseData)) {
-          setCourses(courseData);
+          fetchedCourses = courseData;
         } else if (courseData && typeof courseData === "object") {
-          setCourses(courseData.data || courseData.courses || Object.values(courseData).find(Array.isArray) || []);
+          fetchedCourses = courseData.data || courseData.courses || Object.values(courseData).find(Array.isArray) || [];
+        }
+        
+        // Backend கோர்ஸ்கள் இருந்தால் அவையும் DEFAULT_COURSES-உடன் இணைந்து கொள்ளும்
+        if (fetchedCourses.length > 0) {
+          const formattedFetched = fetchedCourses.map(c => ({
+            code: c.code || c.course_code || c.id,
+            name: c.name || c.title || c.code
+          }));
+          // இரண்டையும் இணைத்தல் (Duplicate தவிர்க்கலாம் அல்லது இவ்வாறே வைக்கலாம்)
+          setCourses([...DEFAULT_COURSES, ...formattedFetched]);
         }
       } catch (err) {
-        console.error("Failed to load courses for dropdown:", err);
+        console.error("Using default course list:", err);
       }
 
     } catch (err) {
@@ -80,8 +105,7 @@ export default function Students() {
 
   const openAdd = () => {
     const nextId = generateStudentId(rows);
-    // முதல் கோர்ஸை டீஃபல்ட்டாகவும் செட் செய்யலாம் (optional)
-    const defaultCourse = courses.length > 0 ? (courses[0].code || courses[0].course_code || "") : "";
+    const defaultCourse = courses.length > 0 ? courses[0].code : "";
     setForm({ ...empty, student_id: nextId, course_code: defaultCourse });
     setEditingId(null);
     setOpen(true);
@@ -172,7 +196,7 @@ export default function Students() {
             <div className="col-span-2"><Label>Email</Label><Input data-testid="student-email-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
             <div className="col-span-1"><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
             
-            {/* Course Code Dropdown Menu */}
+            {/* Course Code Dropdown with All Required Courses */}
             <div className="col-span-1">
               <Label>Course</Label>
               <select 
@@ -181,15 +205,11 @@ export default function Students() {
                 onChange={(e) => setForm({ ...form, course_code: e.target.value })}
               >
                 <option value="">Select Course</option>
-                {courses.map((c, index) => {
-                  const code = c.code || c.course_code || c.id;
-                  const name = c.name || c.title || code;
-                  return (
-                    <option key={index} value={code}>
-                      {name} ({code})
-                    </option>
-                  );
-                })}
+                {courses.map((c, index) => (
+                  <option key={index} value={c.code}>
+                    {c.name} ({c.code})
+                  </option>
+                ))}
               </select>
             </div>
 
