@@ -12,6 +12,7 @@ const empty = { student_id: "", name: "", email: "", phone: "", course_code: "",
 
 export default function Students() {
   const [rows, setRows] = useState([]);
+  const [courses, setCourses] = useState([]); // கோர்ஸ்களை சேமிக்க
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(empty);
@@ -20,8 +21,9 @@ export default function Students() {
   const load = async () => {
     setLoading(true);
     try { 
-      const response = await api.get("/students");
-      const rawData = response.data;
+      // 1. மாணவர்களின் விவரங்களை ஏற்றுதல்
+      const resStudents = await api.get("/students");
+      const rawData = resStudents.data;
       let finalRows = [];
 
       if (Array.isArray(rawData)) {
@@ -29,8 +31,21 @@ export default function Students() {
       } else if (rawData && typeof rawData === "object") {
         finalRows = rawData.data || rawData.students || Object.values(rawData).find(Array.isArray) || [];
       }
-
       setRows(finalRows);
+
+      // 2. கோர்ஸ்களின் விவரங்களை ஏற்றுதல் (Dropdown-க்காக)
+      try {
+        const resCourses = await api.get("/courses");
+        const courseData = resCourses.data;
+        if (Array.isArray(courseData)) {
+          setCourses(courseData);
+        } else if (courseData && typeof courseData === "object") {
+          setCourses(courseData.data || courseData.courses || Object.values(courseData).find(Array.isArray) || []);
+        }
+      } catch (err) {
+        console.error("Failed to load courses for dropdown:", err);
+      }
+
     } catch (err) {
       console.error("Failed to load students:", err);
       toast.error("Failed to load students");
@@ -48,7 +63,6 @@ export default function Students() {
       return "TS-STU-00001";
     }
 
-    // ஏற்கனவே உள்ள IDs-லிருந்து நம்பர்களை மட்டும் பிரித்து அதிகபட்ச நம்பரைக் கண்டறிதல்
     let maxNum = 0;
     existingRows.forEach((row) => {
       if (row.student_id && row.student_id.startsWith("TS-STU-")) {
@@ -66,7 +80,9 @@ export default function Students() {
 
   const openAdd = () => {
     const nextId = generateStudentId(rows);
-    setForm({ ...empty, student_id: nextId });
+    // முதல் கோர்ஸை டீஃபல்ட்டாகவும் செட் செய்யலாம் (optional)
+    const defaultCourse = courses.length > 0 ? (courses[0].code || courses[0].course_code || "") : "";
+    setForm({ ...empty, student_id: nextId, course_code: defaultCourse });
     setEditingId(null);
     setOpen(true);
   };
@@ -147,7 +163,7 @@ export default function Students() {
               <Input 
                 data-testid="student-id-input" 
                 value={form.student_id} 
-                readOnly={!editingId} // புதிய மாணவர் சேர்க்கும்போது ID-யை மாற்ற முடியாது (Auto-generated), Edit செய்யும்போது மாற்றிக்கொள்ளலாம்
+                readOnly={!editingId} 
                 className={!editingId ? "bg-muted cursor-not-allowed font-mono-jb" : "font-mono-jb"}
                 onChange={(e) => setForm({ ...form, student_id: e.target.value })} 
               />
@@ -155,7 +171,28 @@ export default function Students() {
             <div className="col-span-1"><Label>Name</Label><Input data-testid="student-name-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
             <div className="col-span-2"><Label>Email</Label><Input data-testid="student-email-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
             <div className="col-span-1"><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-            <div className="col-span-1"><Label>Course Code</Label><Input value={form.course_code} onChange={(e) => setForm({ ...form, course_code: e.target.value })} /></div>
+            
+            {/* Course Code Dropdown Menu */}
+            <div className="col-span-1">
+              <Label>Course</Label>
+              <select 
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={form.course_code}
+                onChange={(e) => setForm({ ...form, course_code: e.target.value })}
+              >
+                <option value="">Select Course</option>
+                {courses.map((c, index) => {
+                  const code = c.code || c.course_code || c.id;
+                  const name = c.name || c.title || code;
+                  return (
+                    <option key={index} value={code}>
+                      {name} ({code})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
             <div className="col-span-1"><Label>Batch</Label><Input value={form.batch} onChange={(e) => setForm({ ...form, batch: e.target.value })} /></div>
             <div className="col-span-1"><Label>Status</Label><Input value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} /></div>
             <div className="col-span-1"><Label>Fees Paid</Label><Input type="number" value={form.fees_paid} onChange={(e) => setForm({ ...form, fees_paid: e.target.value })} /></div>
