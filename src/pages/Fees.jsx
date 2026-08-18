@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import DataTable from "@/components/DataTable";
 import { Progress } from "@/components/ui/progress";
-import { CreditCard, Eye, History } from "lucide-react";
+import { CreditCard, Eye, History, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Fees() {
@@ -16,11 +16,16 @@ export default function Fees() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ student_id: "", amount: 0, method: "cash", note: "" });
 
-  // மாணவர் கட்டிய கட்டண வரலாற்றை (Payment History) பார்ப்பதற்கான State
+  // History states
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedStudentHistory, setSelectedStudentHistory] = useState([]);
   const [selectedStudentName, setSelectedStudentName] = useState("");
+  const [selectedStudentId, setSelectedStudentId] = useState("");
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Edit payment states
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ id: null, amount: 0, method: "cash", note: "" });
 
   const load = async () => {
     setLoading(true);
@@ -46,28 +51,64 @@ export default function Fees() {
     }
   };
 
-  // மாணவர் எப்போது, எவ்வளவு கட்டணம் செலுத்தினார் என்பதை டேட்டாபேஸில் இருந்து எடுக்கும் வசதி
   const viewHistory = async (student) => {
     setSelectedStudentName(student.name);
+    setSelectedStudentId(student.student_id);
     setSelectedStudentHistory([]);
     setHistoryOpen(true);
     setHistoryLoading(true);
 
     try {
-      // API எண்ட்பாயிண்ட் /fees/history அல்லது /fees/transactions என இருக்கலாம்
       const res = await api.get(`/fees/history`, { params: { student_id: student.student_id } });
       setSelectedStudentHistory(res.data || []);
     } catch (e) {
-      // ஒருவேளை தனி எண்ட்பாயிண்ட் இல்லையெனில் மாணவரின் டேட்டாவிலிருந்து காட்டுவது அல்லது எம்டி அவுட் செய்வது
-      setSelectedStudentHistory(student.transactions || student.payments || []);
+      setSelectedStudentHistory([]);
     } finally {
       setHistoryLoading(false);
     }
   };
 
+  const handleEditClick = (txn) => {
+    setEditForm({ id: txn.id, amount: txn.amount, method: txn.method || "cash", note: txn.note || "" });
+    setEditOpen(true);
+  };
+
+  const updatePayment = async () => {
+    try {
+      await api.put(`/fees/payments/${editForm.id}`, {
+        amount: Number(editForm.amount),
+        method: editForm.method,
+        note: editForm.note
+      });
+      toast.success("Payment updated successfully");
+      setEditOpen(false);
+      load();
+      if (selectedStudentId) {
+        const res = await api.get(`/fees/history`, { params: { student_id: selectedStudentId } });
+        setSelectedStudentHistory(res.data || []);
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Failed to update payment");
+    }
+  };
+
+  const deletePayment = async (txnId) => {
+    if (!confirm("Are you sure you want to delete this payment record?")) return;
+    try {
+      await api.delete(`/fees/payments/${txnId}`);
+      toast.success("Payment deleted successfully");
+      load();
+      if (selectedStudentId) {
+        const res = await api.get(`/fees/history`, { params: { student_id: selectedStudentId } });
+        setSelectedStudentHistory(res.data || []);
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Failed to delete payment");
+    }
+  };
+
   const columns = [
-    // --- S.No நெடுவரிசை மற்றும் NaN வராமல் தடுக்க index சேர்க்கப்பட்டுள்ளது ---
-   { 
+    { 
       key: "s_no", 
       header: "S.No", 
       render: (r) => <span className="text-muted-foreground text-xs">{rows.indexOf(r) + 1}</span> 
@@ -109,7 +150,6 @@ export default function Fees() {
         addLabel="Record payment" 
         addTestId="record-payment-btn"
         searchKeys={["student_id", "name", "course_code"]}
-        // --- ஒவ்வொரு மாணவருக்கும் கட்டண வரலாற்றைப் பார்க்க View History பட்டன் சேர்க்கப்பட்டுள்ளது ---
         rowActions={(row) => (
           <div className="flex justify-end gap-1">
             <Button size="icon" variant="ghost" title="View Payment History" onClick={() => viewHistory(row)}>
@@ -143,7 +183,7 @@ export default function Fees() {
             <DialogTitle className="flex items-center gap-2">
               <History className="w-5 h-5 text-primary" /> Payment History - {selectedStudentName}
             </DialogTitle>
-            <DialogDescription>List of all payments made by this student.</DialogDescription>
+            <DialogDescription>List of all payments made by this student with edit/delete options.</DialogDescription>
           </DialogHeader>
 
           <div className="mt-3">
@@ -160,8 +200,18 @@ export default function Fees() {
                         {txn.created_at ? new Date(txn.created_at).toLocaleString("en-IN") : ""}
                       </div>
                     </div>
-                    <div className="font-mono-jb font-bold text-success">
-                      +₹{Number(txn.amount || 0).toLocaleString("en-IN")}
+                    <div className="flex items-center gap-3">
+                      <div className="font-mono-jb font-bold text-success">
+                        +₹{Number(txn.amount || 0).toLocaleString("en-IN")}
+                      </div>
+                      <div className="flex gap-1">
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleEditClick(txn)}>
+                          <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => deletePayment(txn.id)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -175,6 +225,22 @@ export default function Fees() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setHistoryOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Payment Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Edit fee payment</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Amount (₹)</Label><Input type="number" value={editForm.amount} onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })} /></div>
+            <div><Label>Method</Label><Input value={editForm.method} onChange={(e) => setEditForm({ ...editForm, method: e.target.value })} placeholder="cash / upi / card" /></div>
+            <div><Label>Note</Label><Input value={editForm.note} onChange={(e) => setEditForm({ ...editForm, note: e.target.value })} /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button className="btn-gradient" onClick={updatePayment}>Update Payment</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

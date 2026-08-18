@@ -47,11 +47,10 @@ export default function Attendance() {
   const statusFor = (sid) => attendance.find((a) => a.person_id === sid)?.status;
 
   const columns = [
-    // --- S.No நெடுவரிசை மற்றும் NaN வராமல் தடுக்க index சேர்க்கப்பட்டுள்ளது ---
-      { 
+    { 
       key: "s_no", 
       header: "S.No", 
-      render: (r) => <span className="text-muted-foreground text-xs">{rows.indexOf(r) + 1}</span> 
+      render: (r) => <span className="text-muted-foreground text-xs">{students.indexOf(r) + 1}</span> 
     },
     { key: "student_id", header: "ID", render: (r) => <span className="font-mono-jb text-xs">{r.student_id}</span> },
     { key: "name", header: "Student", render: (r) => <span className="font-medium">{r.name}</span> },
