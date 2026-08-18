@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DataTable, { StatusBadge } from "@/components/DataTable";
-import { CheckCircle2, XCircle, Clock, Calendar as CalIcon } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Calendar as CalIcon, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Attendance() {
@@ -14,6 +13,9 @@ export default function Attendance() {
   const [summary, setSummary] = useState({});
   const [loading, setLoading] = useState(true);
 
+  // முந்தைய தேதிகளை (Past dates) எடிட் செய்யக் கூடாது என்பதற்கான கண்டிஷன்
+  const isPastDate = date < today;
+
   const load = async () => {
     setLoading(true);
     try {
@@ -22,12 +24,21 @@ export default function Attendance() {
         api.get("/attendance", { params: { date } }),
         api.get("/attendance/summary"),
       ]);
-      setStudents(s.data); setAttendance(a.data); setSummary(sm.data);
-    } finally { setLoading(false); }
+      setStudents(s.data); 
+      setAttendance(a.data); 
+      setSummary(sm.data);
+    } finally { 
+      setLoading(false); 
+    }
   };
+
   useEffect(() => { load(); }, [date]);
 
   const mark = async (student_id, status) => {
+    if (isPastDate) {
+      toast.error("You cannot modify attendance for past dates.");
+      return;
+    }
     await api.post("/attendance/mark", { person_id: student_id, person_type: "student", date, status, method: "manual" });
     toast.success(`Marked ${status}`);
     load();
@@ -36,6 +47,12 @@ export default function Attendance() {
   const statusFor = (sid) => attendance.find((a) => a.person_id === sid)?.status;
 
   const columns = [
+    // --- S.No நெடுவரிசை மற்றும் NaN வராமல் தடுக்க index சேர்க்கப்பட்டுள்ளது ---
+      { 
+      key: "s_no", 
+      header: "S.No", 
+      render: (r) => <span className="text-muted-foreground text-xs">{rows.indexOf(r) + 1}</span> 
+    },
     { key: "student_id", header: "ID", render: (r) => <span className="font-mono-jb text-xs">{r.student_id}</span> },
     { key: "name", header: "Student", render: (r) => <span className="font-medium">{r.name}</span> },
     { key: "batch", header: "Batch", className: "text-muted-foreground" },
@@ -63,7 +80,7 @@ export default function Attendance() {
 
       <DataTable
         title="Attendance"
-        description="Mark attendance for the selected date."
+        description={isPastDate ? "Viewing past attendance (Locked for editing)." : "Mark attendance for the selected date."}
         data={students}
         loading={loading}
         columns={columns}
@@ -83,9 +100,17 @@ export default function Attendance() {
         }
         rowActions={(row) => (
           <div className="flex justify-end gap-1">
-            <Button size="sm" variant="ghost" className="text-[hsl(var(--success))]" data-testid={`mark-present-${row.student_id}`} onClick={() => mark(row.student_id, "present")}>Present</Button>
-            <Button size="sm" variant="ghost" className="text-yellow-600" data-testid={`mark-late-${row.student_id}`} onClick={() => mark(row.student_id, "late")}>Late</Button>
-            <Button size="sm" variant="ghost" className="text-destructive" data-testid={`mark-absent-${row.student_id}`} onClick={() => mark(row.student_id, "absent")}>Absent</Button>
+            {isPastDate ? (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground px-2 py-1 bg-muted rounded">
+                <Lock className="w-3 h-3" /> Locked
+              </span>
+            ) : (
+              <>
+                <Button size="sm" variant="ghost" className="text-[hsl(var(--success))]" data-testid={`mark-present-${row.student_id}`} onClick={() => mark(row.student_id, "present")}>Present</Button>
+                <Button size="sm" variant="ghost" className="text-yellow-600" data-testid={`mark-late-${row.student_id}`} onClick={() => mark(row.student_id, "late")}>Late</Button>
+                <Button size="sm" variant="ghost" className="text-destructive" data-testid={`mark-absent-${row.student_id}`} onClick={() => mark(row.student_id, "absent")}>Absent</Button>
+              </>
+            )}
           </div>
         )}
       />

@@ -18,19 +18,45 @@ export default function Courses() {
   const [form, setForm] = useState(empty);
   const [editingId, setEditingId] = useState(null);
 
-  const load = async () => { setLoading(true); try { const { data } = await api.get("/courses"); setRows(data); } finally { setLoading(false); } };
+  const load = async () => { 
+    setLoading(true); 
+    try { 
+      const { data } = await api.get("/courses"); 
+      setRows(data); 
+    } finally { 
+      setLoading(false); 
+    } 
+  };
+  
   useEffect(() => { load(); }, []);
 
   const save = async () => {
     const payload = { ...form, duration_weeks: Number(form.duration_weeks), fee: Number(form.fee), seats: Number(form.seats), enrolled: Number(form.enrolled) };
     try {
-      if (editingId) await api.put(`/courses/${editingId}`, payload); else await api.post("/courses", payload);
-      toast.success("Saved"); setOpen(false); load();
-    } catch (e) { toast.error(e.response?.data?.detail || "Failed"); }
+      if (editingId) await api.put(`/courses/${editingId}`, payload); 
+      else await api.post("/courses", payload);
+      toast.success("Saved"); 
+      setOpen(false); 
+      load();
+    } catch (e) { 
+      toast.error(e.response?.data?.detail || "Failed"); 
+    }
   };
-  const remove = async (id) => { if (!confirm("Delete this course?")) return; await api.delete(`/courses/${id}`); toast.success("Deleted"); load(); };
+
+  const remove = async (id) => { 
+    if (!confirm("Delete this course?")) return; 
+    await api.delete(`/courses/${id}`); 
+    toast.success("Deleted"); 
+    load(); 
+  };
 
   const columns = [
+    // --- S.No நெடுவரிசை மற்றும் NaN வராமல் தடுக்க index சேர்க்கப்பட்டுள்ளது ---
+     { 
+      key: "s_no", 
+      header: "S.No", 
+      render: (r) => <span className="text-muted-foreground text-xs">{rows.indexOf(r) + 1}</span> 
+    },
     { key: "code", header: "Code", render: (r) => <span className="font-mono-jb text-xs">{r.code}</span> },
     { key: "title", header: "Title", render: (r) => <span className="font-medium">{r.title}</span> },
     { key: "trainer", header: "Trainer" },
@@ -45,9 +71,12 @@ export default function Courses() {
       <DataTable
         title="Courses"
         description="Programs offered by the institute."
-        data={rows} loading={loading} columns={columns}
+        data={rows} 
+        loading={loading} 
+        columns={columns}
         onAdd={() => { setForm(empty); setEditingId(null); setOpen(true); }}
-        addLabel="Add course" addTestId="add-course-btn"
+        addLabel="Add course" 
+        addTestId="add-course-btn"
         searchKeys={["code", "title", "trainer"]}
         rowActions={(row) => (
           <div className="flex justify-end gap-1">
@@ -56,6 +85,7 @@ export default function Courses() {
           </div>
         )}
       />
+      
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{editingId ? "Edit course" : "Add course"}</DialogTitle></DialogHeader>
