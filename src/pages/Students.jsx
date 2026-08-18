@@ -10,23 +10,9 @@ import { toast } from "sonner";
 
 const empty = { student_id: "", name: "", email: "", phone: "", course_code: "", batch: "", status: "active", fees_paid: 0, fees_total: 0 };
 
-// நீங்கள் கேட்ட அனைத்து கோர்ஸ்களின் பட்டியல் (Default Courses List)
-const DEFAULT_COURSES = [
-  { code: "REACT", name: "React.js Development" },
-  { code: "PYTHON-FS", name: "Python Full Stack" },
-  { code: "JAVA-FS", name: "Java Full Stack" },
-  { code: "MERN", name: "MERN Stack" },
-  { code: "UI-UX", name: "UI/UX Design" },
-  { code: "AWS", name: "AWS Cloud" },
-  { code: "C", name: "C Programming" },
-  { code: "CPP", name: "C++ Programming" },
-  { code: "BASIC-COMP", name: "Basic Computer" },
-  { code: "ADV-COMP", name: "Advanced Computer" },
-];
-
 export default function Students() {
   const [rows, setRows] = useState([]);
-  const [courses, setCourses] = useState(DEFAULT_COURSES); // Default கோர்ஸ்கள் இணைக்கப்பட்டுள்ளது
+  const [courses, setCourses] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(empty);
@@ -47,28 +33,30 @@ export default function Students() {
       }
       setRows(finalRows);
 
-      // 2. Backend-லிருந்து கோர்ஸ்கள் இருந்தால் அதையும் சேர்த்துக்கொள்ளலாம் (Optional)
+      // 2. Database-லிருந்து கோர்ஸ்களை ஏற்றுதல்
       try {
         const resCourses = await api.get("/courses");
         const courseData = resCourses.data;
         let fetchedCourses = [];
+        
         if (Array.isArray(courseData)) {
           fetchedCourses = courseData;
         } else if (courseData && typeof courseData === "object") {
           fetchedCourses = courseData.data || courseData.courses || Object.values(courseData).find(Array.isArray) || [];
         }
         
-        // Backend கோர்ஸ்கள் இருந்தால் அவையும் DEFAULT_COURSES-உடன் இணைந்து கொள்ளும்
-        if (fetchedCourses.length > 0) {
-          const formattedFetched = fetchedCourses.map(c => ({
-            code: c.code || c.course_code || c.id,
-            name: c.name || c.title || c.code
-          }));
-          // இரண்டையும் இணைத்தல் (Duplicate தவிர்க்கலாம் அல்லது இவ்வாறே வைக்கலாம்)
-          setCourses([...DEFAULT_COURSES, ...formattedFetched]);
-        }
+        // கோர்ஸின் பெயரை மட்டுமே value-வாகவும் text-ாகவும் பயன்படுத்துதல்
+        const formattedFetched = fetchedCourses.map(c => {
+          const courseName = c.name || c.title || c.code || "";
+          return {
+            name: courseName
+          };
+        });
+        
+        setCourses(formattedFetched);
       } catch (err) {
-        console.error("Using default course list:", err);
+        console.error("Failed to load courses from database:", err);
+        setCourses([]);
       }
 
     } catch (err) {
@@ -105,7 +93,7 @@ export default function Students() {
 
   const openAdd = () => {
     const nextId = generateStudentId(rows);
-    const defaultCourse = courses.length > 0 ? courses[0].code : "";
+    const defaultCourse = courses.length > 0 ? courses[0].name : "";
     setForm({ ...empty, student_id: nextId, course_code: defaultCourse });
     setEditingId(null);
     setOpen(true);
@@ -173,15 +161,17 @@ export default function Students() {
         )}
       />
 
+      {/* Responsive Dialog Modal */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>{editingId ? "Edit student" : "Add student"}</DialogTitle>
             <DialogDescription>
               Fill in the student details below and click save.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-3">
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="col-span-1">
               <Label>Student ID</Label>
               <Input 
@@ -192,35 +182,67 @@ export default function Students() {
                 onChange={(e) => setForm({ ...form, student_id: e.target.value })} 
               />
             </div>
-            <div className="col-span-1"><Label>Name</Label><Input data-testid="student-name-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div className="col-span-2"><Label>Email</Label><Input data-testid="student-email-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-            <div className="col-span-1"><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
             
-            {/* Course Code Dropdown with All Required Courses */}
+            <div className="col-span-1">
+              <Label>Name</Label>
+              <Input data-testid="student-name-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </div>
+
+            <div className="col-span-1 sm:col-span-2">
+              <Label>Email</Label>
+              <Input data-testid="student-email-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            </div>
+
+            <div className="col-span-1">
+              <Label>Phone</Label>
+              <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            </div>
+            
+            {/* Responsive Course Name Dropdown (Code hidden completely) */}
             <div className="col-span-1">
               <Label>Course</Label>
               <select 
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 truncate"
                 value={form.course_code}
                 onChange={(e) => setForm({ ...form, course_code: e.target.value })}
               >
                 <option value="">Select Course</option>
-                {courses.map((c, index) => (
-                  <option key={index} value={c.code}>
-                    {c.name} ({c.code})
-                  </option>
-                ))}
+                {courses.length > 0 ? (
+                  courses.map((c, index) => (
+                    <option key={index} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="" disabled>No courses found in database</option>
+                )}
               </select>
             </div>
 
-            <div className="col-span-1"><Label>Batch</Label><Input value={form.batch} onChange={(e) => setForm({ ...form, batch: e.target.value })} /></div>
-            <div className="col-span-1"><Label>Status</Label><Input value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} /></div>
-            <div className="col-span-1"><Label>Fees Paid</Label><Input type="number" value={form.fees_paid} onChange={(e) => setForm({ ...form, fees_paid: e.target.value })} /></div>
-            <div className="col-span-1"><Label>Fees Total</Label><Input type="number" value={form.fees_total} onChange={(e) => setForm({ ...form, fees_total: e.target.value })} /></div>
+            <div className="col-span-1">
+              <Label>Batch</Label>
+              <Input value={form.batch} onChange={(e) => setForm({ ...form, batch: e.target.value })} />
+            </div>
+
+            <div className="col-span-1">
+              <Label>Status</Label>
+              <Input value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} />
+            </div>
+
+            <div className="col-span-1">
+              <Label>Fees Paid</Label>
+              <Input type="number" value={form.fees_paid} onChange={(e) => setForm({ ...form, fees_paid: e.target.value })} />
+            </div>
+
+            <div className="col-span-1">
+              <Label>Fees Total</Label>
+              <Input type="number" value={form.fees_total} onChange={(e) => setForm({ ...form, fees_total: e.target.value })} />
+            </div>
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button className="btn-gradient" data-testid="student-save-btn" onClick={save}>Save</Button>
+
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-4">
+            <Button variant="ghost" onClick={() => setOpen(false)} className="w-full sm:w-auto">Cancel</Button>
+            <Button className="btn-gradient w-full sm:w-auto" data-testid="student-save-btn" onClick={save}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
