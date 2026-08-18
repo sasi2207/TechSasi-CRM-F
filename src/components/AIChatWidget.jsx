@@ -31,38 +31,26 @@ export default function AIChatWidget() {
     setMessages((m) => [...m, { role: "user", content: msg }, { role: "assistant", content: "" }]);
     setSending(true);
 
-    // FIX: Token சரியான பெயரில் உள்ளதா என்பதை உறுதி செய்தல்
-    const token = localStorage.getItem("token") || localStorage.getItem("techsasi_token");
-
+    const token = localStorage.getItem("techsasi_token");
     try {
       const resp = await fetch(`${API}/ai/chat/stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // Token இருந்தால் Header-ல் சேர்ப்போம்
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         credentials: "include",
         body: JSON.stringify({ message: msg, session_id: session }),
       });
 
-      // 401 Error வந்தால் பயனருக்குத் தெரியப்படுத்துதல்
-      if (!resp.ok) {
+      if (!resp.ok || !resp.body) {
         setMessages((m) => {
           const copy = [...m];
-          copy[copy.length - 1] = { 
-            role: "assistant", 
-            content: resp.status === 401 
-              ? "Your session has expired. Please logout and login again." 
-              : `Sorry, I couldn't respond right now (Error ${resp.status}).` 
-          };
+          copy[copy.length - 1] = { role: "assistant", content: `Sorry, I couldn't respond right now (${resp.status}).` };
           return copy;
         });
-        setSending(false);
         return;
       }
-
-      if (!resp.body) throw new Error("No response body");
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
@@ -127,7 +115,7 @@ export default function AIChatWidget() {
           </div>
           <div>
             <div className="font-outfit font-semibold text-sm">TechSasi AI</div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-widest">Powered by Gemini AI</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest">Powered by Claude Sonnet 5</div>
           </div>
         </div>
 
