@@ -27,34 +27,38 @@ export default function AIChatWidget() {
   const send = async (text) => {
     const msg = (text ?? input).trim();
     if (!msg || sending) return;
+    
     setInput("");
     setMessages((m) => [...m, { role: "user", content: msg }, { role: "assistant", content: "" }]);
     setSending(true);
 
-    // FIX: Token சரியான பெயரில் உள்ளதா என்பதை உறுதி செய்தல்
+    // 1. Get Token (Double check your browser's Local Storage to ensure the key matches exactly)
     const token = localStorage.getItem("token") || localStorage.getItem("techsasi_token");
+
+    // 2. Build Headers safely
+    const headers = {
+      "Content-Type": "application/json",
+    };
+    
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
 
     try {
       const resp = await fetch(`${API}/ai/chat/stream`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // Token இருந்தால் Header-ல் சேர்ப்போம்
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
+        headers: headers,
+        credentials: "include", // Keep this if your backend also relies on cookies
         body: JSON.stringify({ message: msg, session_id: session }),
       });
 
-      // 401 Error வந்தால் பயனருக்குத் தெரியப்படுத்துதல்
-      if (!resp.ok) {
+      // Handle 401 Unauthorized explicitly
+      if (resp.status === 401) {
         setMessages((m) => {
           const copy = [...m];
           copy[copy.length - 1] = { 
             role: "assistant", 
-            content: resp.status === 401 
-              ? "Your session has expired. Please logout and login again." 
-              : `Sorry, I couldn't respond right now (Error ${resp.status}).` 
+            content: "Authentication failed. Your session may have expired. Please log out and log back in." 
           };
           return copy;
         });
@@ -62,23 +66,31 @@ export default function AIChatWidget() {
         return;
       }
 
+      if (!resp.ok) {
+        throw new Error(`Server responded with Error ${resp.status}`);
+      }
+
       if (!resp.body) throw new Error("No response body");
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buf = "";
+      
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
+        
         buf += decoder.decode(value, { stream: true });
         const parts = buf.split("\n\n");
         buf = parts.pop() || "";
+        
         for (const chunk of parts) {
           const lines = chunk.split("\n");
           for (const line of lines) {
             if (line.startsWith("data: ")) {
               const payload = line.slice(6);
               if (payload === "[DONE]") continue;
+              
               const text = payload.replace(/\\n/g, "\n");
               setMessages((m) => {
                 const copy = [...m];
