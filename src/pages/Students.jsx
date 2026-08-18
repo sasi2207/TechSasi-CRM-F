@@ -33,7 +33,7 @@ export default function Students() {
       }
       setRows(finalRows);
 
-      // 2. Database-லிருந்து கோர்ஸ்களை ஏற்றுதல்
+      // 2. Database-லிருந்து கோர்ஸ்களை ஏற்றுதல் (Fees உடன் சேர்த்து)
       try {
         const resCourses = await api.get("/courses");
         const courseData = resCourses.data;
@@ -45,11 +45,14 @@ export default function Students() {
           fetchedCourses = courseData.data || courseData.courses || Object.values(courseData).find(Array.isArray) || [];
         }
         
-        // கோர்ஸின் பெயரை மட்டுமே value-வாகவும் text-ாகவும் பயன்படுத்துதல்
+        // கோர்ஸின் பெயர் மற்றும் கட்டணத்தை (fee) சேர்த்து ஃபார்மட் செய்தல்
         const formattedFetched = fetchedCourses.map(c => {
           const courseName = c.name || c.title || c.code || "";
+          // கோர்ஸ் டேபிளில் உள்ள கட்டணப் புலத்தை (fee, fees, price) எடுக்கவும்
+          const courseFee = Number(c.fee || c.fees || c.price || c.fees_total || 0);
           return {
-            name: courseName
+            name: courseName,
+            fee: courseFee
           };
         });
         
@@ -94,7 +97,14 @@ export default function Students() {
   const openAdd = () => {
     const nextId = generateStudentId(rows);
     const defaultCourse = courses.length > 0 ? courses[0].name : "";
-    setForm({ ...empty, student_id: nextId, course_code: defaultCourse });
+    const defaultFee = courses.length > 0 ? courses[0].fee : 0;
+    
+    setForm({ 
+      ...empty, 
+      student_id: nextId, 
+      course_code: defaultCourse, 
+      fees_total: defaultFee 
+    });
     setEditingId(null);
     setOpen(true);
   };
@@ -103,6 +113,18 @@ export default function Students() {
     setForm({ ...empty, ...r }); 
     setEditingId(r.id); 
     setOpen(true); 
+  };
+
+  // கோர்ஸ் மாறும்போது ஆட்டோமேட்டிக்காக Total Fees மாற்றும் வசதி
+  const handleCourseChange = (selectedCourseName) => {
+    const foundCourse = courses.find(c => c.name === selectedCourseName);
+    const newFee = foundCourse ? foundCourse.fee : 0;
+    
+    setForm({
+      ...form,
+      course_code: selectedCourseName,
+      fees_total: newFee
+    });
   };
 
   const save = async () => {
@@ -198,13 +220,13 @@ export default function Students() {
               <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
             
-            {/* Responsive Course Name Dropdown (Code hidden completely) */}
+            {/* Course Dropdown - handles dynamic fee updating */}
             <div className="col-span-1">
               <Label>Course</Label>
               <select 
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 truncate"
                 value={form.course_code}
-                onChange={(e) => setForm({ ...form, course_code: e.target.value })}
+                onChange={(e) => handleCourseChange(e.target.value)}
               >
                 <option value="">Select Course</option>
                 {courses.length > 0 ? (
