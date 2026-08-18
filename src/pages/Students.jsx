@@ -155,7 +155,7 @@ export default function Students() {
     }
   };
 
-  const columns = [
+ const columns = [
     // --- S.No சரியான முறையில் index மூலம் கொடுக்கப்பட்டுள்ளது ---
     { 
       key: "s_no", 
@@ -167,16 +167,13 @@ export default function Students() {
     { key: "email", header: "Email", className: "text-muted-foreground" },
     { key: "course_code", header: "Course" },
     { key: "batch", header: "Batch", className: "text-muted-foreground" },
-    { 
-      key: "fees", 
-      header: "Fees", 
-      className: "text-right", 
-      render: (r) => (
-        <div className="text-right font-mono-jb text-xs">
-          ₹{(r.fees_paid || 0).toLocaleString("en-IN")} / ₹{(r.fees_total || 0).toLocaleString("en-IN")}
-        </div>
-      ) 
-    },
+    { key: "fees", header: "Fees", className: "text-right", render: (r) => (
+      <div className="text-right font-mono-jb text-xs">
+        ₹{(r.fees_paid || 0).toLocaleString("en-IN")} / ₹{(r.fees_total || 0).toLocaleString("en-IN")}
+      </div>
+    ) },
+    { key: "status", header: "Status", render: (r) => <StatusBadge value={r.status} /> },
+  
     // --- Joined Date & Time நெடுவரிசை சேர்க்கப்பட்டுள்ளது ---
     { 
       key: "created_at", 
