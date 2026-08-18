@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import DataTable, { StatusBadge } from "@/components/DataTable";
@@ -155,25 +156,28 @@ export default function Students() {
     }
   };
 
- const columns = [
+  const columns = [
     // --- S.No சரியான முறையில் index மூலம் கொடுக்கப்பட்டுள்ளது ---
-    { 
+   { 
       key: "s_no", 
       header: "S.No", 
-      render: (_, index) => <span className="text-muted-foreground text-xs">{index + 1}</span> 
+      render: (r) => <span className="text-muted-foreground text-xs">{rows.indexOf(r) + 1}</span> 
     },
     { key: "student_id", header: "ID", render: (r) => <span className="font-mono-jb text-xs">{r.student_id}</span> },
     { key: "name", header: "Name", render: (r) => <span className="font-medium">{r.name}</span> },
     { key: "email", header: "Email", className: "text-muted-foreground" },
     { key: "course_code", header: "Course" },
     { key: "batch", header: "Batch", className: "text-muted-foreground" },
-    { key: "fees", header: "Fees", className: "text-right", render: (r) => (
-      <div className="text-right font-mono-jb text-xs">
-        ₹{(r.fees_paid || 0).toLocaleString("en-IN")} / ₹{(r.fees_total || 0).toLocaleString("en-IN")}
-      </div>
-    ) },
-    { key: "status", header: "Status", render: (r) => <StatusBadge value={r.status} /> },
-  
+    { 
+      key: "fees", 
+      header: "Fees", 
+      className: "text-right", 
+      render: (r) => (
+        <div className="text-right font-mono-jb text-xs">
+          ₹{(r.fees_paid || 0).toLocaleString("en-IN")} / ₹{(r.fees_total || 0).toLocaleString("en-IN")}
+        </div>
+      ) 
+    },
     // --- Joined Date & Time நெடுவரிசை சேர்க்கப்பட்டுள்ளது ---
     { 
       key: "created_at", 
