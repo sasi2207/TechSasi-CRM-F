@@ -21,15 +21,31 @@ export default function Landing() {
   return (
     <div className="min-h-screen auth-bg relative overflow-hidden">
       <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 py-5">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF6B00] to-[#FF8C33] flex items-center justify-center shadow-lg shadow-primary/20">
-            <span className="text-white font-outfit font-bold text-sm">T</span>
-          </div>
-          <div>
-            <div className="font-outfit font-semibold">TechSasi</div>
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">ERP + CRM</div>
-          </div>
-        </div>
+   <div className="flex items-center">
+              <Link to="/">
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  className="flex items-center gap-3 cursor-pointer"
+                >
+                  <div className="leading-none">
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tight">
+                      <span className="text-gray-900">TECH</span>
+                      <span className="text-orange-500">SASI</span>
+                    </h1> 
+
+                    <div className="flex items-center justify-center gap-1 mt-1 text-[9px] md:text-[10px] font-bold uppercase text-gray-400">
+                      <div className="w-3 md:w-4 h-[1.5px] bg-orange-500"></div>
+                      <span>Learn</span>
+                      <span className="text-orange-500">•</span>
+                      <span>Build</span>
+                      <span className="text-orange-500">•</span>
+                      <span>Grow</span>
+                      <div className="w-3 md:w-4 h-[1.5px] bg-orange-500"></div>
+                    </div>
+                  </div>
+                </motion.div>
+              </Link>
+            </div>
         <div className="flex items-center gap-2">
           <Link to="/login" data-testid="landing-login">
             <Button variant="ghost" className="rounded-full">Log in</Button>

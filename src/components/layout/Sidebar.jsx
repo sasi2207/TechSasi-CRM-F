@@ -1,7 +1,8 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard, Users, UserCog, BookOpen, CalendarCheck, CreditCard,
-  Sparkles, Briefcase, ScrollText, Building2, Settings, TrendingUp, Award, UserPlus
+  Sparkles, Briefcase, ScrollText, Settings, TrendingUp, Award, UserPlus
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
@@ -33,7 +34,7 @@ export default function Sidebar({ onNavigate }) {
 
   // Filter navigation items based on user role
   const filteredNav = NAV.filter((item) => {
-    if (item.section) return true; // Keep sections for now, can be cleaned if all items in section are hidden
+    if (item.section) return true;
     if (!item.roles || item.roles.includes("*")) return true;
     return item.roles.includes(userRole);
   });
@@ -43,16 +44,31 @@ export default function Sidebar({ onNavigate }) {
       data-testid="app-sidebar"
       className="w-64 shrink-0 border-r border-border/60 bg-card/60 backdrop-blur-xl h-screen sticky top-0 flex flex-col"
     >
-      <div className="px-5 py-5 border-b border-border/60 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF6B00] to-[#FF8C33] flex items-center justify-center shadow-lg shadow-primary/20">
-          <Building2 className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <div className="font-outfit font-semibold text-base leading-tight">TechSasi</div>
-          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Learn · Build · Grow</div>
-        </div>
+      {/* Brand Header */}
+      <div className="p-5 border-b border-border/60">
+        <Link to="/" className="block">
+          <motion.div whileHover={{ scale: 1.02 }} className="cursor-pointer">
+            <div className="leading-none">
+              <h1 className="text-xl font-black tracking-tight">
+                <span className="text-foreground">TECH</span>
+                <span className="text-orange-500">SASI</span>
+              </h1> 
+
+              <div className="flex items-center gap-1 mt-1 text-[9px] font-bold uppercase text-muted-foreground">
+                <div className="w-3 h-[1.5px] bg-orange-500"></div>
+                <span>Learn</span>
+                <span className="text-orange-500">•</span>
+                <span>Build</span>
+                <span className="text-orange-500">•</span>
+                <span>Grow</span>
+                <div className="w-3 h-[1.5px] bg-orange-500"></div>
+              </div>
+            </div>
+          </motion.div>
+        </Link>
       </div>
 
+      {/* Navigation Links */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {filteredNav.map((item, i) =>
           item.section ? (
@@ -66,7 +82,7 @@ export default function Sidebar({ onNavigate }) {
               end={item.end}
               data-testid={item.testid}
               onClick={onNavigate}
-              className={({ isActive }) => cn("nav-item", isActive && "active")}
+              className={({ isActive }) => cn("nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/50", isActive && "active bg-primary/10 text-primary hover:bg-primary/15")}
             >
               <item.icon className="w-4 h-4" />
               <span>{item.label}</span>
@@ -75,9 +91,10 @@ export default function Sidebar({ onNavigate }) {
         )}
       </nav>
 
+      {/* User Profile Footer */}
       <div className="px-4 py-3 border-t border-border/60">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/80 to-orange-400 flex items-center justify-center text-white font-semibold text-sm">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/80 to-orange-400 flex items-center justify-center text-white font-semibold text-sm shadow-sm">
             {(user?.name || "?").slice(0, 1).toUpperCase()}
           </div>
           <div className="min-w-0">
