@@ -22,6 +22,10 @@ import AIAssistant from "@/pages/AIAssistant";
 import Certificates from "@/pages/Certificates";
 import VerifyCertificate from "@/pages/VerifyCertificate";
 import Settings from "@/pages/Settings";
+import { Careers } from "./pages/Careers";
+import { JobApply } from "./pages/JobApply";
+import { AdminPostJob } from "./pages/AdminPostJob";
+import { JobApplicationView } from "./pages/JobApplicationView";
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -39,11 +43,20 @@ function AppRoutes() {
 
   return (
     <Routes>
+      {/* Public Routes */}
       <Route path="/" element={<Landing />} />
       <Route path="/verify/:token" element={<VerifyCertificate />} />
       <Route path="/login" element={user ? <Navigate to="/app" replace /> : <Login />} />
-      {/* Note: Public /register if needed standalone, otherwise handled inside /app/register */}
 
+      {/* Public/Standalone Careers & Job Application Routes */}
+      {/* <Route path="/Careers" element={<Careers />} /> */}
+      {/* <Route path="/Careers/apply/:jobId" element={<JobApply />} /> */}
+
+      {/* Protected Admin/HR Job Management Routes (Outside /app if they use their own layout, or move inside as relative paths) */}
+      <Route path="/AdminPostJob" element={<ProtectedRoute><AdminPostJob /></ProtectedRoute>} />
+      <Route path="/Job" element={<ProtectedRoute><JobApplicationView /></ProtectedRoute>} />
+
+      {/* Authenticated Dashboard App Routes */}
       <Route path="/app" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
         <Route index element={<Dashboard />} />
         <Route path="students" element={<Students />} />
@@ -57,8 +70,6 @@ function AppRoutes() {
         <Route path="ai" element={<AIAssistant />} />
         <Route path="certificates" element={<Certificates />} />
         <Route path="settings" element={<Settings />} />
-        
-        {/* 👇 FIXED: Moved register inside /app so sidebar link '/app/register' works correctly with layout */}
         <Route path="register" element={<Register />} />
       </Route>
 

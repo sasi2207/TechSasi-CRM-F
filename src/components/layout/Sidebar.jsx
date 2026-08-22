@@ -2,7 +2,8 @@ import { NavLink, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard, Users, UserCog, BookOpen, CalendarCheck, CreditCard,
-  Sparkles, Briefcase, ScrollText, Settings, TrendingUp, Award, UserPlus
+  Sparkles, Briefcase, ScrollText, Settings, TrendingUp, Award, UserPlus,
+  FilePlus, FileText
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,10 @@ const NAV = [
   { section: "HR & Agency" },
   { to: "/app/staff", label: "Staff / HRMS", icon: UserCog, testid: "nav-staff", roles: ["admin", "super_admin", "hr"] },
   { to: "/app/projects", label: "Projects", icon: Briefcase, testid: "nav-projects", roles: ["*"] },
+  // Added Careers & Job Management
+  { to: "/Careers", label: "Careers Portal", icon: Briefcase, testid: "nav-careers", roles: ["*"] },
+  { to: "/AdminPostJob", label: "Post a Job", icon: FilePlus, testid: "nav-admin-post-job", roles: ["admin", "super_admin", "hr"] },
+  { to: "/Job", label: "Job Applications", icon: FileText, testid: "nav-job-applications", roles: ["admin", "super_admin", "hr"] },
   { section: "Sales & Finance" },
   { to: "/app/leads", label: "CRM Leads", icon: TrendingUp, testid: "nav-leads", roles: ["*"] },
   { to: "/app/invoices", label: "Invoices", icon: ScrollText, testid: "nav-invoices", roles: ["*"] },
